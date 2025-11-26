@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Calculadora Pediátrica - SUS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --card-bg: #ffffff;
+      --card-muted-bg: #f0f1f5;
+      --primary: #2563eb;
+      --primary-soft: #dbeafe;
+      --text-main: #111827;
+      --text-muted: #6b7280;
+      --border: #e5e7eb;
+      --radius-lg: 16px;
+      --radius-md: 10px;
+      --shadow-soft: 0 12px 30px rgba(15, 23, 42, 0.08);
+      --shadow-light: 0 4px 12px rgba(15, 23, 42, 0.06);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #e0f2fe, #f4f6fb 50%, #eef2ff);
+      color: var(--text-main);
+    }
+    .header { padding: 24px 16px 12px; }
+    .header-inner { max-width: 960px; margin: 0 auto; }
+    .header h1 { margin: 0 0 6px; font-size: 1.8rem; }
+    .header p { margin: 0; color: var(--text-muted); }
+    .main {
+      max-width: 960px;
+      margin: 0 auto 32px;
+      padding: 0 16px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius-lg);
+      padding: 20px 18px;
+      box-shadow: var(--shadow-soft);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+    }
+    .card h2, .card h3 { margin-top: 0; margin-bottom: 14px; font-size: 1.1rem; }
+    .card-muted { background: var(--card-muted-bg); box-shadow: var(--shadow-light); }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px 16px;
+      margin-bottom: 12px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group.full { grid-column: 1 / -1; }
+    .form-group label { font-size: 0.85rem; color: var(--text-muted); }
+    .inline-group { display: flex; gap: 8px; }
+    input, select {
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      font-size: 0.95rem;
+      background: #ffffff;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.4);
+    }
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border-radius: 999px;
+      border: none;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #ffffff;
+      padding: 10px 20px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 6px;
+      box-shadow: 0 12px 20px rgba(37, 99, 235, 0.35);
+      transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+    }
+    .btn-primary:hover {
+      filter: brightness(1.03);
+      box-shadow: 0 16px 28px rgba(37, 99, 235, 0.45);
+      transform: translateY(-1px);
+    }
+    .btn-primary:active {
+      transform: translateY(0);
+      box-shadow: 0 8px 18px rgba(37, 99, 235, 0.35);
+    }
+    .result-content { font-size: 0.95rem; color: var(--text-main); }
+    .result-header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      background: var(--primary-soft);
+      border: 1px solid rgba(37, 99, 235, 0.2);
+      margin-bottom: 10px;
+    }
+    .result-chip { font-size: 0.8rem; color: #1e3a8a; }
+    .result-section { margin-bottom: 8px; }
+    .result-section h4 { margin: 8px 0 4px; font-size: 0.9rem; }
+    .result-section p { margin: 0; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    .badge-info { background: #e0f2fe; color: #1d4ed8; }
+    .badge-warning { background: #fef3c7; color: #92400e; }
+    .badge-danger { background: #fee2e2; color: #b91c1c; }
+    ul { margin: 8px 0 0 18px; padding: 0; }
+    .footer {
+      text-align: center;
+      padding: 10px 16px 18px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    @media (max-width: 640px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .card { padding: 18px 14px; }
+      .header h1 { font-size: 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <h1>Calculadora Pediátrica SUS</h1>
+      <p>Insira peso, idade e selecione o medicamento para obter a posologia sugerida.</p>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="card">
+      <h2>Dados da criança</h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="weight">Peso (kg)</label>
+          <input type="number" id="weight" min="1" step="0.1" placeholder="Ex.: 12,5" />
+        </div>
+        <div class="form-group">
+          <label for="ageValue">Idade</label>
+          <div class="inline-group">
+            <input type="number" id="ageValue" min="0" step="1" placeholder="Ex.: 18" />
+            <select id="ageUnit">
+              <option value="months">meses</option>
+              <option value="years">anos</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label for="medication">Medicamento (SUS)</label>
+          <select id="medication"></select>
+        </div>
+        <div class="form-group full" id="regimen-group" style="display:none;">
+          <label for="regimen">Esquema posológico</label>
+          <select id="regimen"></select>
+        </div>
+      </div>
+      <button id="calculateBtn" class="btn-primary">Calcular posologia</button>
+    </section>
+
+    <section class="card" id="result-card">
+      <h2>Resultado</h2>
+      <div id="result-content" class="result-content">
+        <p>Preencha os dados e clique em <strong>Calcular posologia</strong>.</p>
+      </div>
+    </section>
+
+    <section class="card card-muted">
+      <h3>Observações importantes</h3>
+      <ul>
+        <li>Ferramenta de apoio à prática clínica. Não substitui o julgamento médico.</li>
+        <li>Confira sempre as doses máximas diárias e por dose, especialmente em crianças com baixo peso, obesidade ou comorbidades.</li>
+        <li>Ajuste a duração do tratamento conforme o diagnóstico (OMA, sinusite, pneumonia, ITU, parasitoses, etc.).</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Uso exclusivo profissional. Baseado em apresentações disponíveis no SUS.</p>
+  </footer>
+
+  <script>
+    const MEDS_CONFIG = {
+      amox_50: {
+        id: "amox_50",
+        name: "Amoxicilina suspensão 50 mg/mL",
+        category: "Antibióticos",
+        calculator: "standard",
+        regimens: [
+          {
+            id: "amox50_50",
+            label: "50 mg/kg/dia – 3x/dia (OMA, faringoamigdalite, sinusite, pneumonia leve) | máx. 10 mL/dose",
+            mgPerKgPerDay: 50,
+            dosesPerDay: 3,
+            concMgPerMl: 50,
+            maxMlPerDose: 10
+          },
+          {
+            id: "amox50_90",
+            label: "90 mg/kg/dia – 3x/dia (infecções graves/recorrentes ou uso recente de ATB) | máx. 4 g/dia",
+            mgPerKgPerDay: 90,
+            dosesPerDay: 3,
+            concMgPerMl: 50,
+            maxTotalMgPerDay: 4000
+          }
+        ],
+        notes: "Ajustar duração conforme diagnóstico. Observar dose máxima diária e por dose."
+      },
+      amoxclav_50_12_5: {
+        id: "amoxclav_50_12_5",
+        name: "Amoxicilina + Clavulanato 50 + 12,5 mg/mL (75 mL)",
+        category: "Antibióticos",
+        calculator: "amoxclav",
+        regimens: [
+          {
+            id: "amoxclav_50",
+            label: "50 mg/kg/dia (amoxicilina) – 3x/dia",
+            mgPerKgPerDay: 50,
+            dosesPerDay: 3,
+            concMgPerMl: 50
+          },
+          {
+            id: "amoxclav_80",
+            label: "80 mg/kg/dia (amoxicilina) – 3x/dia",
+            mgPerKgPerDay: 80,
+            dosesPerDay: 3,
+            concMgPerMl: 50
+          }
+        ],
+        notes: "Respeitar dose máxima de clavulanato: 375 mg/dia (12,5 mg/mL). Monitorar diarreia e intolerância."
+      },
+      azitro_200_5: {
+        id: "azitro_200_5",
+        name: "Azitromicina 200 mg/5 mL (40 mg/mL)",
+        category: "Antibióticos",
+        calculator: "standard",
+        regimens: [
+          {
+            id: "azitro_10",
+            label: "10 mg/kg/dia – 1x/dia",
+            mgPerKgPerDay: 10,
+            dosesPerDay: 1,
+            concMgPerMl: 40
+          }
+        ],
+        notes: "Duração: 3 dias (Chlamydia), 5–7 dias (sinusite/otite/pneumonia atípica, etc.), conforme quadro clínico."
+      },
+      smz_tmp_40_8: {
+        id: "smz_tmp_40_8",
+        name: "Sulfametoxazol + Trimetoprima 40 + 8 mg/mL",
+        category: "Antibióticos",
+        calculator: "smz_tmp",
+        regimens: [
+          {
+            id: "smztmp_8",
+            label: "8 mg/kg/dia de TMP – 2x/dia",
+            tmpMgPerKgPerDay: 8,
+            dosesPerDay: 2
+          },
+          {
+            id: "smztmp_10",
+            label: "10 mg/kg/dia de TMP – 2x/dia",
+            tmpMgPerKgPerDay: 10,
+            dosesPerDay: 2
+          }
+        ],
+        notes: "Cada mL contém 8 mg de TMP e 40 mg de SMZ. Usar com cautela em lactentes pequenos e em G6PD."
+      },
+      metoclopramida: {
+        id: "metoclopramida",
+        name: "Metoclopramida (cálculo em mg)",
+        category: "Sintomáticos",
+        calculator: "metoclopramida",
+        regimens: [
+          { id: "meto_0_4", label: "0,4 mg/kg/dia – 3x/dia (8/8 h)", mgPerKgPerDay: 0.4, dosesPerDay: 3 },
+          { id: "meto_0_6", label: "0,6 mg/kg/dia – 3x/dia (8/8 h)", mgPerKgPerDay: 0.6, dosesPerDay: 3 },
+          { id: "meto_0_8", label: "0,8 mg/kg/dia – 3x/dia (8/8 h)", mgPerKgPerDay: 0.8, dosesPerDay: 3 }
+        ],
+        notes: "Atentar para risco de efeitos extrapiramidais, especialmente em crianças pequenas."
+      },
+      dimenidrinato_gotas: {
+        id: "dimenidrinato_gotas",
+        name: "Dimenidrinato gotas 25 mg/mL",
+        category: "Sintomáticos",
+        calculator: "dimenidrinato",
+        notes: "Esquema: 1 gota/kg/dose a cada 6 h (máx. 40 gotas/dose). Considerar sedação e evitar uso prolongado."
+      },
+      loratadina: {
+        id: "loratadina",
+        name: "Loratadina xarope 1 mg/mL",
+        category: "Antialérgicos",
+        calculator: "loratadina",
+        notes: "2–6 anos ou <30 kg: 5 mL 1x/dia | ≥6 anos ou ≥30 kg: 10 mL 1x/dia. Evitar uso <2 anos."
+      },
+      desloratadina: {
+        id: "desloratadina",
+        name: "Desloratadina (Desalex®) solução",
+        category: "Antialérgicos",
+        calculator: "desloratadina",
+        notes: "6–12 meses: 2 mL 1x/dia | 1–5 anos: 2,5 mL 1x/dia | 6–12 anos: 5 mL 1x/dia."
+      },
+      hidroxizina: {
+        id: "hidroxizina",
+        name: "Hidroxizina xarope 2 mg/mL",
+        category: "Antialérgicos",
+        calculator: "hidroxizina",
+        notes: "Usar em ≥6 meses e >6 kg. Doses em faixas de peso, de 6/6 h a 12/12 h. Causa sonolência."
+      },
+      annita: {
+        id: "annita",
+        name: "Nitazoxanida (Annita®) 20 mg/mL",
+        category: "Antiparasitários",
+        calculator: "annita",
+        notes: "Fórmula prática: (7,5 × peso) ÷ 20 = mL por dose, 12/12 h por 3 dias (máx. 15 mL/dose)."
+      },
+      albendazol: {
+        id: "albendazol",
+        name: "Albendazol suspensão 400 mg/10 mL",
+        category: "Antiparasitários",
+        calculator: "albendazol",
+        notes: "Dose usual: 10 mL 1x/dia por 3–5 dias. Evitar uso em menores de 2 anos."
+      },
+      cefalexina_250_5: {
+        id: "cefalexina_250_5",
+        name: "Cefalexina solução 250 mg/5 mL (50 mg/mL)",
+        category: "Antibióticos",
+        calculator: "standard",
+        regimens: [
+          {
+            id: "cefa_50",
+            label: "50 mg/kg/dia – 4x/dia (6/6 h) | máx. 10 mL/dose ou 2 g/dia",
+            mgPerKgPerDay: 50,
+            dosesPerDay: 4,
+            concMgPerMl: 50,
+            maxMlPerDose: 10,
+            maxTotalMgPerDay: 2000
+          },
+          {
+            id: "cefa_75",
+            label: "75 mg/kg/dia – 4x/dia (6/6 h) – otite média",
+            mgPerKgPerDay: 75,
+            dosesPerDay: 4,
+            concMgPerMl: 50
+          },
+          {
+            id: "cefa_100",
+            label: "100 mg/kg/dia – 4x/dia (6/6 h) – infecções mais graves",
+            mgPerKgPerDay: 100,
+            dosesPerDay: 4,
+            concMgPerMl: 50
+          }
+        ],
+        notes: "Ajustar duração conforme sítio de infecção. Monitorar função renal em casos específicos."
+      },
+      simeticona_75: {
+        id: "simeticona_75",
+        name: "Simeticona 75 mg/mL (gotas)",
+        category: "Sintomáticos",
+        calculator: "simeticona",
+        notes: "Lactentes/crianças <6 anos: 20–40 mg (5–10 gotas) 3–4x/dia | ≥6 anos: 40–80 mg (10–20 gotas) 8/8 h."
+      },
+      dipirona_500: {
+        id: "dipirona_500",
+        name: "Dipirona gotas 500 mg/mL",
+        category: "Sintomáticos",
+        calculator: "dipirona",
+        notes: "0,6 gota/kg/dose a cada 6 h se dor ou febre. Aproximadamente 15 mg/kg/dose."
+      },
+      ondansetrona_4_5: {
+        id: "ondansetrona_4_5",
+        name: "Ondansetrona solução 4 mg/5 mL",
+        category: "Sintomáticos",
+        calculator: "ondansetrona",
+        notes: "Dose: 0,2 mg/kg/dose, máx. 8 mg/dose, a cada 8 h se náusea/vômitos, por curto período."
+      },
+      klaricid_25: {
+        id: "klaricid_25",
+        name: "Claritromicina (Klaricid®) 25 mg/mL",
+        category: "Antibióticos",
+        calculator: "standard",
+        regimens: [
+          {
+            id: "klar_15",
+            label: "15 mg/kg/dia – 2x/dia (12/12 h) | máx. 10 mL/dose",
+            mgPerKgPerDay: 15,
+            dosesPerDay: 2,
+            concMgPerMl: 25,
+            maxMlPerDose: 10
+          }
+        ],
+        notes: "Duração usual: 10 dias para faringite e algumas infecções respiratórias, conforme indicação."
+      },
+      nitrofurantoina_25_5: {
+        id: "nitrofurantoina_25_5",
+        name: "Nitrofurantoína 25 mg/5 mL (5 mg/mL)",
+        category: "Antibióticos",
+        calculator: "standard",
+        regimens: [
+          {
+            id: "nitro_5",
+            label: "5 mg/kg/dia – 4x/dia (6/6 h) | máx. 400 mg/dia",
+            mgPerKgPerDay: 5,
+            dosesPerDay: 4,
+            concMgPerMl: 5,
+            maxTotalMgPerDay: 400
+          },
+          {
+            id: "nitro_7",
+            label: "7 mg/kg/dia – 4x/dia (6/6 h) | máx. 400 mg/dia",
+            mgPerKgPerDay: 7,
+            dosesPerDay: 4,
+            concMgPerMl: 5,
+            maxTotalMgPerDay: 400
+          }
+        ],
+        notes: "Dose: 5–7 mg/kg/dia divididos em 4 tomadas (6/6 h). Dose máxima: 400 mg/dia. Usada para ITU baixa; ajustar conforme protocolo local e função renal."
+      },
+      dengue_hidratacao: {
+        id: "dengue_hidratacao",
+        name: "Dengue – Hidratação oral (80 mL/kg/dia)",
+        category: "Hidratação",
+        calculator: "dengue",
+        notes: "Hidratação oral em dengue: 80 mL/kg/dia, sendo 1/3 em soro de reidratação oral (SRO) e 2/3 em outros líquidos claros (água, sucos, chás), preferindo opções sem açúcar."
+      }
+    };
+
+    function round(value, decimals) {
+      const factor = Math.pow(10, decimals);
+      return Math.round(value * factor) / factor;
+    }
+
+    function buildMedSelect() {
+      const select = document.getElementById("medication");
+      const categories = {};
+      Object.values(MEDS_CONFIG).forEach((med) => {
+        if (!categories[med.category]) categories[med.category] = [];
+        categories[med.category].push(med);
+      });
+      select.innerHTML = "";
+      Object.keys(categories).forEach((cat) => {
+        const optgroup = document.createElement("optgroup");
+        optgroup.label = cat;
+        categories[cat].forEach((med) => {
+          const opt = document.createElement("option");
+          opt.value = med.id;
+          opt.textContent = med.name;
+          optgroup.appendChild(opt);
+        });
+        select.appendChild(optgroup);
+      });
+    }
+
+    function updateRegimenSelect() {
+      const medId = document.getElementById("medication").value;
+      const med = MEDS_CONFIG[medId];
+      const group = document.getElementById("regimen-group");
+      const regimenSelect = document.getElementById("regimen");
+      if (med && Array.isArray(med.regimens) && med.regimens.length > 0) {
+        group.style.display = "block";
+        regimenSelect.innerHTML = "";
+        med.regimens.forEach((reg) => {
+          const opt = document.createElement("option");
+          opt.value = reg.id;
+          opt.textContent = reg.label;
+          regimenSelect.appendChild(opt);
+        });
+      } else {
+        group.style.display = "none";
+        regimenSelect.innerHTML = "";
+      }
+    }
+
+    function getAgeInYearsAndMonths() {
+      const ageValue = parseFloat(document.getElementById("ageValue").value);
+      const ageUnit = document.getElementById("ageUnit").value;
+      if (isNaN(ageValue) || ageValue < 0) return { years: null, months: null };
+      if (ageUnit === "years") return { years: ageValue, months: ageValue * 12 };
+      return { years: ageValue / 12, months: ageValue };
+    }
+
+    function calcStandard(weight, regimen, medConfig) {
+      if (!regimen) return { error: "Selecione o esquema posológico.", medConfig };
+      const totalMg = regimen.mgPerKgPerDay * weight;
+      const doses = regimen.dosesPerDay;
+      const mgPerDose = totalMg / doses;
+      let mlPerDose = null, totalMlDay = null;
+      const info = [], warnings = [];
+      if (regimen.concMgPerMl) {
+        mlPerDose = mgPerDose / regimen.concMgPerMl;
+        totalMlDay = mlPerDose * doses;
+      }
+      info.push(`Dose total diária: <strong>${round(totalMg, 1)} mg</strong> (${round(regimen.mgPerKgPerDay, 1)} mg/kg/dia), dividida em <strong>${doses} doses</strong>.`);
+      if (mlPerDose !== null) {
+        info.push(`Quantidade por dose: <strong>${round(mlPerDose, 1)} mL</strong> (${round(mgPerDose, 1)} mg) ${doses}×/dia.`);
+        info.push(`Volume total diário aproximado: <strong>${round(totalMlDay, 1)} mL/dia</strong>.`);
+      } else {
+        info.push(`Quantidade por dose: <strong>${round(mgPerDose, 2)} mg</strong>, ${doses}×/dia.`);
+      }
+      if (regimen.maxTotalMgPerDay && totalMg > regimen.maxTotalMgPerDay) {
+        warnings.push(`Dose calculada excede a dose máxima diária recomendada de <strong>${regimen.maxTotalMgPerDay} mg/dia</strong>. Considere reduzir a dose.`);
+      }
+      if (regimen.maxMlPerDose && mlPerDose !== null && mlPerDose > regimen.maxMlPerDose) {
+        warnings.push(`Volume por dose acima do recomendado (<strong>${regimen.maxMlPerDose} mL/dose</strong>). Avalie reduzir dose ou ajustar apresentação.`);
+      }
+      return { summary: info.join("<br>"), warnings, medConfig };
+    }
+
+    function calcAmoxClav(weight, regimen) {
+      const medConfig = MEDS_CONFIG["amoxclav_50_12_5"];
+      const base = calcStandard(weight, regimen, medConfig);
+      if (base.error) return base;
+      if (regimen && regimen.concMgPerMl) {
+        const totalAmoxMgDay = regimen.mgPerKgPerDay * weight;
+        const totalMlDay = totalAmoxMgDay / regimen.concMgPerMl;
+        const clavPerMl = 12.5;
+        const totalClavDay = totalMlDay * clavPerMl;
+        base.summary += `<br><br><strong>Clavulanato estimado:</strong> ${round(totalClavDay, 1)} mg/dia.`;
+        if (totalClavDay > 375) {
+          base.warnings.push(`Dose de clavulanato ultrapassa <strong>375 mg/dia</strong>. Avalie reduzir dose de amoxicilina/clavulanato ou trocar esquema.`);
+        }
+      }
+      return base;
+    }
+
+    function calcSmzTmp(weight, regimen) {
+      const medConfig = MEDS_CONFIG["smz_tmp_40_8"];
+      if (!regimen) return { error: "Selecione o esquema (8 ou 10 mg/kg/dia de TMP).", medConfig };
+      const tmpMgDay = regimen.tmpMgPerKgPerDay * weight;
+      const doses = regimen.dosesPerDay;
+      const tmpMgDose = tmpMgDay / doses;
+      const tmpMgPerMl = 8;
+      const smzMgPerMl = 40;
+      const mlPerDose = tmpMgDose / tmpMgPerMl;
+      const smzMgDose = mlPerDose * smzMgPerMl;
+      const info = [], warnings = [];
+      info.push(`Dose total diária de <strong>TMP</strong>: <strong>${round(tmpMgDay, 1)} mg</strong> (${regimen.tmpMgPerKgPerDay} mg/kg/dia), dividida em ${doses} doses.`);
+      info.push(`Por dose: <strong>${round(mlPerDose, 1)} mL</strong> (${round(tmpMgDose, 1)} mg de TMP + ${round(smzMgDose, 1)} mg de SMZ), ${doses}×/dia.`);
+      return { summary: info.join("<br>"), warnings, medConfig };
+    }
+
+    function calcMetoclopramida(weight, regimen) {
+      const medConfig = MEDS_CONFIG["metoclopramida"];
+      if (!regimen) return { error: "Selecione a dose diária desejada (0,4–0,8 mg/kg/dia).", medConfig };
+      const totalMg = regimen.mgPerKgPerDay * weight;
+      const doses = regimen.dosesPerDay;
+      const mgPerDose = totalMg / doses;
+      const info = [], warnings = [];
+      info.push(`Dose total diária: <strong>${round(totalMg, 2)} mg</strong> (${regimen.mgPerKgPerDay} mg/kg/dia).`);
+      info.push(`Posologia sugerida: <strong>${round(mgPerDose, 2)} mg</strong> VO a cada 8 h (3×/dia). Ajustar para apresentação disponível.`);
+      warnings.push("Monitorar efeitos extrapiramidais, especialmente em lactentes e crianças pequenas. Evitar uso prolongado.");
+      return { summary: info.join("<br>"), warnings, medConfig };
+    }
+
+    function calcDimenidrinato(weight) {
+      const medConfig = MEDS_CONFIG["dimenidrinato_gotas"];
+      const gotas = Math.min(Math.round(weight), 40);
+      const warnings = [];
+      if (weight > 40 && gotas === 40) warnings.push("Peso elevado para esquema 1 gota/kg/dose. Mantida dose máxima de 40 gotas/dose.");
+      const summary = `Posologia sugerida: <strong>${gotas} gotas</strong> VO a cada 6 h, se náusea/vômitos (máx. 40 gotas/dose).`;
+      return { summary, warnings, medConfig };
+    }
+
+    function calcLoratadina(weight, age) {
+      const medConfig = MEDS_CONFIG["loratadina"];
+      const warnings = [];
+      if (age === null) return { error: "Informe a idade para calcular Loratadina.", medConfig };
+      if (age < 2) {
+        warnings.push("Loratadina xarope não é recomendada de rotina para menores de 2 anos.");
+        return { summary: "Evitar uso em < 2 anos. Individualizar conduta.", warnings, medConfig };
+      }
+      let mlDose;
+      if ((age >= 2 && age < 6) || weight < 30) mlDose = 5;
+      else mlDose = 10;
+      const mgDose = mlDose;
+      const summary = `Posologia sugerida: <strong>${mlDose} mL VO 1×/dia</strong> (${mgDose} mg).`;
+      return { summary, warnings, medConfig };
+    }
+
+    function calcDesloratadina(ageYears, ageMonths) {
+      const medConfig = MEDS_CONFIG["desloratadina"];
+      const warnings = [];
+      if (ageYears === null) return { error: "Informe a idade para calcular Desloratadina.", medConfig };
+      let mlDose, msg;
+      if (ageMonths < 6) {
+        warnings.push("Desloratadina não é recomendada para menores de 6 meses.");
+        msg = "Evitar uso em < 6 meses. Individualizar conduta.";
+      } else if (ageMonths >= 6 && ageMonths < 12) {
+        mlDose = 2; msg = `6–12 meses: <strong>${mlDose} mL VO 1×/dia</strong>.`;
+      } else if (ageYears >= 1 && ageYears < 6) {
+        mlDose = 2.5; msg = `1–5 anos: <strong>${mlDose} mL VO 1×/dia</strong>.`;
+      } else if (ageYears >= 6 && ageYears < 12) {
+        mlDose = 5; msg = `6–12 anos: <strong>${mlDose} mL VO 1×/dia</strong>.`;
+      } else {
+        msg = "≥12 anos: usualmente comprimido 5 mg VO 1×/dia (não calculado em mL aqui).";
+      }
+      return { summary: msg, warnings, medConfig };
+    }
+
+    function calcHidroxizina(weight, ageYears) {
+      const medConfig = MEDS_CONFIG["hidroxizina"];
+      const warnings = [];
+      if (ageYears === null) return { error: "Informe idade para calcular Hidroxizina.", medConfig };
+      if (ageYears < 0.5 || weight <= 6) warnings.push("Esquema usual considera ≥6 meses e >6 kg.");
+      let faixa;
+      if (weight >= 8 && weight < 10) faixa = "2 a 2,5 mL por dose, de 6/6 h a 12/12 h.";
+      else if (weight >= 10 && weight < 12) faixa = "2,5 a 3 mL por dose, de 6/6 h a 12/12 h.";
+      else if (weight >= 12 && weight < 24) faixa = "3 a 6 mL por dose, de 6/6 h a 12/12 h.";
+      else if (weight >= 24 && weight <= 40) faixa = "6 a 12 mL por dose, de 6/6 h a 12/12 h.";
+      else if (ageYears >= 12) faixa = "25 a 100 mg VO 3–4×/dia (ajustar à menor dose eficaz).";
+      else faixa = "Peso fora das faixas descritas (8–40 kg). Ajustar cuidadosamente.";
+      const summary = `Posologia sugerida (faixa de dose): <strong>${faixa}</strong>`;
+      warnings.push("Atentar para sedação importante. Evitar associar a outros depressores do SNC.");
+      return { summary, warnings, medConfig };
+    }
+
+    function calcAnnita(weight) {
+      const medConfig = MEDS_CONFIG["annita"];
+      const mlDose = (7.5 * weight) / 20;
+      const mgDose = 7.5 * weight;
+      const warnings = [];
+      if (mlDose > 15) warnings.push("Dose calculada excede 15 mL/dose. Considere limitar a 15 mL/dose.");
+      const summary = `Posologia sugerida: aproximadamente <strong>${round(mlDose, 1)} mL</strong> (${round(mgDose, 1)} mg) VO a cada 12 h por 3 dias (máx. 15 mL/dose).`;
+      return { summary, warnings, medConfig };
+    }
+
+    function calcAlbendazol(ageYears) {
+      const medConfig = MEDS_CONFIG["albendazol"];
+      const warnings = [];
+      if (ageYears === null) return { error: "Informe idade para calcular Albendazol.", medConfig };
+      if (ageYears < 2) warnings.push("Evitar Albendazol em menores de 2 anos, salvo indicação específica.");
+      const summary = "Posologia usual: <strong>10 mL VO 1×/dia</strong> por 3–5 dias, conforme parasitose suspeita.";
+      return { summary, warnings, medConfig };
+    }
+
+    function calcSimeticona(ageYears) {
+      const medConfig = MEDS_CONFIG["simeticona_75"];
+      const warnings = [];
+      if (ageYears === null) return { error: "Informe idade para simeticona.", medConfig };
+      let faixa;
+      if (ageYears < 6) faixa = "20 a 40 mg (5 a 10 gotas) 3–4×/dia.";
+      else faixa = "40 a 80 mg (10 a 20 gotas) a cada 8 h.";
+      const summary = `Posologia sugerida: <strong>${faixa}</strong>`;
+      return { summary, warnings, medConfig };
+    }
+
+    function calcDipirona(weight) {
+      const medConfig = MEDS_CONFIG["dipirona_500"];
+      const warnings = [];
+      const gotas = round(0.6 * weight, 0);
+      const gotasAjustadas = gotas < 1 ? 1 : gotas;
+      const mgPorGota = 25;
+      const mgDose = gotasAjustadas * mgPorGota;
+      const mgKgDose = mgDose / weight;
+      const mlDose = gotasAjustadas / 20;
+      const summary = `Posologia sugerida: <strong>${gotasAjustadas} gotas</strong> (≈ ${round(mgDose, 0)} mg ≈ ${round(mgKgDose, 1)} mg/kg/dose, ≈ ${round(mlDose, 2)} mL) VO a cada 6 h se dor ou febre.`;
+      if (mgKgDose > 20) warnings.push("Dose calculada acima de 20 mg/kg/dose. Verifique o peso informado.");
+      return { summary, warnings, medConfig };
+    }
+
+    function calcOndansetrona(weight) {
+      const medConfig = MEDS_CONFIG["ondansetrona_4_5"];
+      const warnings = [];
+      const mgDose = 0.2 * weight;
+      const maxDose = 8;
+      let mgFinal = mgDose;
+      if (mgDose > maxDose) {
+        warnings.push("Dose calculada ultrapassa 8 mg/dose. Considerado limite de 8 mg/dose.");
+        mgFinal = maxDose;
+      }
+      const concMgPerMl = 4 / 5;
+      const mlDose = mgFinal / concMgPerMl;
+      const summary = `Posologia sugerida: <strong>${round(mlDose, 1)} mL</strong> (${round(mgFinal, 1)} mg) VO a cada 8 h se náusea/vômitos, por curto período.`;
+      warnings.push("Evitar uso rotineiro e prolongado, especialmente em menores.");
+      return { summary, warnings, medConfig };
+    }
+
+    function calcDengueHydration(weight) {
+      const medConfig = MEDS_CONFIG["dengue_hidratacao"];
+      const warnings = [];
+      const totalMl = 80 * weight;
+      const totalL = totalMl / 1000;
+      const sroMl = totalMl / 3;
+      const sroL = sroMl / 1000;
+      const outrosMl = totalMl - sroMl;
+      const outrosL = outrosMl / 1000;
+      const envelopes = Math.max(1, Math.ceil(sroL));
+      const summary = `
+        Dose de hidratação: <strong>${totalMl.toFixed(0)} mL/dia</strong>
+        (~${round(totalL, 2)} L/dia), correspondente a 80 mL/kg/dia.<br><br>
+        Distribuição recomendada:<br>
+        • <strong>Soro de reidratação oral (SRO):</strong> ${sroMl.toFixed(0)} mL (~${round(sroL, 2)} L/dia) – utilizar aproximadamente ${envelopes} envelope(s), cada um diluído em 1 L de água filtrada.<br>
+        • <strong>Demais líquidos (água, sucos claros, chás):</strong> ${outrosMl.toFixed(0)} mL (~${round(outrosL, 2)} L/dia).<br><br>
+        DILUIR 1 ENVELOPE EM 1L DE ÁGUA FILTRADA. REALIZAR HIDRATAÇÃO VIGOROSA CONSUMINDO APROXIMADAMENTE <strong>${round(totalL, 2)} L AO DIA</strong>, DOS QUAIS <strong>${round(sroL, 2)} L</strong> DE REIDRATAÇÃO COM SORO DE REIDRATAÇÃO E <strong>${round(outrosL, 2)} L</strong> COM ÁGUA, SUCOS, CHÁS (PREFERIR LÍQUIDOS SEM AÇÚCAR E CLAROS).
+      `;
+      return { summary, warnings, medConfig };
+    }
+
+    function renderResult(result, weight, ageYears, ageMonths, medId) {
+      const container = document.getElementById("result-content");
+      if (result.error) {
+        container.innerHTML = `<div class="result-header"><span class="result-chip"><strong>Erro:</strong> ${result.error}</span></div>`;
+        return;
+      }
+      const med = MEDS_CONFIG[medId];
+      const ageLabel = ageYears !== null ? `${round(ageYears, 2)} anos (${round(ageMonths, 0)} meses)` : "não informado";
+      const warningHtml = result.warnings && result.warnings.length
+        ? `<div class="result-section"><h4><span class="badge badge-warning">Atenção</span></h4><ul>${result.warnings.map((w) => `<li>${w}</li>`).join("")}</ul></div>`
+        : "";
+      const notesHtml = med && med.notes
+        ? `<div class="result-section"><h4><span class="badge badge-info">Notas clínicas</span></h4><p>${med.notes}</p></div>`
+        : "";
+      container.innerHTML = `
+        <div class="result-header">
+          <span class="result-chip"><strong>Medicamento:</strong> ${med ? med.name : ""}</span>
+          <span class="result-chip"><strong>Peso:</strong> ${round(weight, 2)} kg</span>
+          <span class="result-chip"><strong>Idade:</strong> ${ageLabel}</span>
+        </div>
+        <div class="result-section">
+          <h4>Posologia calculada</h4>
+          <p>${result.summary}</p>
+        </div>
+        ${warningHtml}
+        ${notesHtml}
+      `;
+    }
+
+    function handleCalculate() {
+      const weight = parseFloat(document.getElementById("weight").value);
+      const medId = document.getElementById("medication").value;
+      const { years: ageYears, months: ageMonths } = getAgeInYearsAndMonths();
+      const med = MEDS_CONFIG[medId];
+      if (isNaN(weight) || weight <= 0) {
+        renderResult({ error: "Informe um peso válido (em kg)." }, 0, ageYears, ageMonths, medId);
+        return;
+      }
+      let regimen = null;
+      if (med && Array.isArray(med.regimens) && med.regimens.length > 0) {
+        const regId = document.getElementById("regimen").value;
+        regimen = med.regimens.find((r) => r.id === regId) || med.regimens[0];
+      }
+      let result;
+      switch (medId) {
+        case "amox_50":
+          result = calcStandard(weight, regimen, med); break;
+        case "amoxclav_50_12_5":
+          result = calcAmoxClav(weight, regimen); break;
+        case "azitro_200_5":
+        case "cefalexina_250_5":
+        case "klaricid_25":
+        case "nitrofurantoina_25_5":
+          result = calcStandard(weight, regimen, med); break;
+        case "smz_tmp_40_8":
+          result = calcSmzTmp(weight, regimen); break;
+        case "metoclopramida":
+          result = calcMetoclopramida(weight, regimen); break;
+        case "dimenidrinato_gotas":
+          result = calcDimenidrinato(weight); break;
+        case "loratadina":
+          result = calcLoratadina(weight, ageYears); break;
+        case "desloratadina":
+          result = calcDesloratadina(ageYears, ageMonths); break;
+        case "hidroxizina":
+          result = calcHidroxizina(weight, ageYears); break;
+        case "annita":
+          result = calcAnnita(weight); break;
+        case "albendazol":
+          result = calcAlbendazol(ageYears); break;
+        case "simeticona_75":
+          result = calcSimeticona(ageYears); break;
+        case "dipirona_500":
+          result = calcDipirona(weight); break;
+        case "ondansetrona_4_5":
+          result = calcOndansetrona(weight); break;
+        case "dengue_hidratacao":
+          result = calcDengueHydration(weight); break;
+        default:
+          result = { error: "Medicamento não reconhecido.", medConfig: med };
+      }
+      renderResult(result, weight, ageYears, ageMonths, medId);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      buildMedSelect();
+      updateRegimenSelect();
+      document.getElementById("medication").addEventListener("change", updateRegimenSelect);
+      document.getElementById("calculateBtn").addEventListener("click", handleCalculate);
+    });
+  </script>
+</body>
+</html>
